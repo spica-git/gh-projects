@@ -1,9 +1,9 @@
 pdfMake.fonts = pdfMake.fonts || {};
 pdfMake.fonts["Roboto"] = {
-	normal: 'Roboto-Regular.ttf',
-	bold: 'Roboto-Medium.ttf',
-	italics: 'Roboto-Italic.ttf',
-	bolditalics: 'Roboto-MediumItalic.ttf'
+	"normal": 'Roboto-Regular.ttf',
+	"bold": 'Roboto-Medium.ttf',
+	"italics": 'Roboto-Italic.ttf',
+	"bolditalics": 'Roboto-MediumItalic.ttf'
 };
 this.pdfMake = this.pdfMake || {};
 this.pdfMake.vfs = this.pdfMake.vfs || {};
