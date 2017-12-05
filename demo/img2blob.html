@@ -9,14 +9,17 @@ textarea {
 div.wrapper {
 	width: 100%;
 }
-div.wrapper > div, div.wrapper > p {
-	padding: 1rem;
+div.wrapper > div {
+	padding: 0.5rem;
 }
-div.wrapper > p {
+div.wrapper > div > p {
 	display:table-cell;
+	white-space: pre-wrap;
+	text-align: left;
 }
-div.wrapper > p > span {
+div.wrapper > div > p > * {
 	vertical-align: top;
+	text-align: left;
 }
 </style>
 </head>
@@ -28,18 +31,16 @@ div.wrapper > p > span {
 
 <div class="wrapper">
 	<div>
-		<input type="file" id="input_01_file" style="width:100%; margin:0px 0px 10px 0px;" accept="image/bmp,image/gif,image/jpeg,image/png" />
-		Blob URL Scheme:<br>
-		<input id="edit_01_result" style="width:100%; margin:0px 0px 5px 0px;" disabled /><br>
+		<input type="file" id="input_01_file" style="margin:0px 0px 10px 0px;" accept="image/bmp,image/gif,image/jpeg,image/png">
+		<p><span>Blob URL Scheme:</span><input id="edit_01_result" style="width:100%; margin:0px 0px 5px 0px;" disabled></p>
 	</div>
 
-	<p>
-		<span>画像:</span>
-		<img src="" id="image_01" style="border:1px solid #2020b0;">
-	</p>
+	<div>
+		<p><span></span>画像:</span><img src="" id="image_01" style="border:1px solid #2020b0;"></p>
+	</div>
 
 	<div>
-		base64: <span id="base64_01size"></span><br />
+		<p><span>base64:</span><span id="base64_01size"></span></p>
 		<textarea id="base64_01" style="width:100%;" rows="12" onclick="this.select();" readonly></textarea>
 	</div>
 </div>
