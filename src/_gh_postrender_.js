@@ -7,7 +7,6 @@ $(document).ready(function(){
 <h1 class="top"><a href="https://spica-git.github.io/gh-projects/">spica git</a></h1>
 <ul class="navi">
 	<li><a href="https://spica.tokyo/">Spica.tokyo</a></li>
-	<li>Spica.tokyo &gt; kintone plugins</li>
 </ul>
 */}).
 toString().match(/\/\*([^]*)\*\//)[1]))

@@ -1,0 +1,40 @@
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>マインスイーパ</title>
+	<meta name="author" content="spica.tokyo">
+	<link rel="stylesheet" type="text/css" href="../css/main.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+	<script src="../src/_gh_postrender_.js"></script>
+	<script src="./minesweeper/ms.js"></script>
+	<link rel="stylesheet" type="text/css" href="./minesweeper/ms.css">
+<style type="text/css">
+textarea {
+	background-color: #e0e0ff;
+}
+div.wrapper {
+	width: 100%;
+	text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="content">
+
+	<h2></h2>
+
+	<div class="wrapper">
+	</div>
+
+
+<script type="text/javascript">
+	var $ms = (new MineSweeper({
+		difficulty: "normal"
+	}));
+	$("div.wrapper").append($ms);
+</script>
+
+</div>
+</body>
+</html>
