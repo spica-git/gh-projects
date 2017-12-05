@@ -1,0 +1,119 @@
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>ファイルイメージをblob(base64)に変換</title>
+<style type="text/css">
+textarea {
+	background-color: #e0e0ff;
+}
+div.wrapper {
+	width: 100%;
+}
+div.wrapper > div, div.wrapper > p {
+	padding: 1rem;
+}
+div.wrapper > p {
+	display:table-cell;
+}
+div.wrapper > p > span {
+	vertical-align: top;
+}
+</style>
+</head>
+
+<body>
+
+<h2>ファイルイメージをblob(base64)に変換</h2>
+
+
+<div class="wrapper">
+	<div>
+		<input type="file" id="input_01_file" style="width:100%; margin:0px 0px 10px 0px;" accept="image/bmp,image/gif,image/jpeg,image/png" />
+		Blob URL Scheme:<br>
+		<input id="edit_01_result" style="width:100%; margin:0px 0px 5px 0px;" disabled /><br>
+	</div>
+
+	<p>
+		<span>画像:</span>
+		<img src="" id="image_01" style="border:1px solid #2020b0;">
+	</p>
+
+	<div>
+		base64: <span id="base64_01size"></span><br />
+		<textarea id="base64_01" style="width:100%;" rows="12" onclick="this.select();" readonly></textarea>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+// 匿名関数内で実行
+(function (){
+
+	var blob_url = null;
+
+	// 各エレメントを取得
+	var element_file = document.getElementById("input_01_file");
+	var element_result = document.getElementById("edit_01_result");
+	var image = document.getElementById("image_01");
+	var base64 = document.getElementById("base64_01");
+	var base64size = document.getElementById("base64_01size");
+
+	// ------------------------------------------------------------
+	// サポート状況
+	// ------------------------------------------------------------
+	if(!window.File){
+		element_result.value = "File クラスに対応していません。";
+		return;
+	}
+	if(!window.URL){
+		element_result.value = "Blob URL Scheme に対応していません。";
+		return;
+	}
+
+	// ------------------------------------------------------------
+	// 値が変化した時に実行されるイベント
+	// ------------------------------------------------------------
+	element_file.addEventListener("change" , function(e){
+
+		// ファイルが選択されたか
+		if(!(element_file.value)) return;
+
+		// ------------------------------------------------------------
+		// File オブジェクトを取得（HTML5 世代）
+		// ------------------------------------------------------------
+		// ファイルリストを取得
+		var file_list = element_file.files;
+		if(!file_list) return;
+
+		// 0 番目の File オブジェクトを取得
+		var file = file_list[0];
+		if(!file) return;
+
+		// ------------------------------------------------------------
+		// base64 を生成
+		// ------------------------------------------------------------
+		var reader = new FileReader();
+		reader.onload = function(e){
+			base64.textContent = e.target.result;
+			base64size.textContent = base64.textContent.length + " byte";
+		};
+		reader.readAsDataURL(file);
+
+
+		// ------------------------------------------------------------
+		// Blob URL Scheme を生成
+		// ------------------------------------------------------------
+		blob_url = window.URL.createObjectURL(file);
+
+		// 画像を読み込む
+		image.src = blob_url;
+
+		// 結果を表示
+		element_result.value = blob_url;
+	});
+
+})();
+</script>
+
+</body>
+</html>
