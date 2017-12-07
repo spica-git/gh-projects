@@ -25,17 +25,15 @@ function Random (arg){
 	if(this instanceof Random){
 		var _fn = function (_arg){
 			if(_arg instanceof Array){
-				_fn.x = 123456789; _fn.y = 362436069; _fn.z = 521288629;
-				var seed = isNaN(_arg[0]) ? null : _arg[0];
-				_fn.w = (seed !== true ? seed == null ? Date.now() : seed : 88675123) % 1e8;
+				_fn.seed = parseInt(_arg[0]) || (parseInt(("" + Math.random()).slice(2), 10) & -1);
 				return;
 			}
-			//XorShiftで生成
-			if(_fn.w == null){ _fn([true]); }
-			var val = _fn.x ^ (_fn.x << 11);
-			_fn.x = _fn.y; _fn.y = _fn.z; _fn.z = _fn.w;
-			val = Math.abs(_fn.w = (_fn.w ^ (_fn.w >>> 19)) ^ (val ^ (val >>> 8)));
-			return isNaN(_arg) ? val : val % Math.abs(parseInt(_arg, 10));
+			//XorShiftしてから絶対値を返す
+			if(_fn.seed == null){ _fn([]); }
+			_fn.seed = _fn.seed ^ (_fn.seed << 13);
+			_fn.seed = _fn.seed ^ (_fn.seed >> 17);
+			_fn.seed = _fn.seed ^ (_fn.seed << 15);
+			return Math.abs(_fn.seed);
 		}
 		_fn(arg instanceof Array ? arg : []);
 		return _fn;
@@ -96,6 +94,7 @@ function MineSweeper(_config){
 		illegal_delay_ms: CONST_ILLEGAL_DELAY_MS
 	}, _config||{});
 
+	this.Seed = parseInt(this.Seed, 10) || null;
 
 	///難易度選択のselect要素を作る
 	var $sel_difficulty = $('<select name="difficulty">').on("change", (function(_e){
@@ -135,7 +134,6 @@ function MineSweeper(_config){
 		.append( $sel_cellsize )
 		.append( $sel_difficulty );
 
-
 	///地雷原となるtable要素です
 	///右クリックでコンテキストメニューが出るのを抑止
 	var $table = $('<table class="mine-field"><tbody></tbody></table>')
@@ -163,11 +161,22 @@ function MineSweeper(_config){
 			.append($('<p class="mine-info">'))
 		);
 
+	///設定変更不可の場合
+	if(!this.ConfigLock !== true){
+		$width.prop("readonly", true);
+		$height.prop("readonly", true);
+		$ratio.prop("readonly", true);
+		$sel_difficulty.css("background-color", "#e0e0e0");
+		$sel_difficulty.find("option").each(function(_i, _e){
+			$(_e).prop("disabled", !$(_e).prop("selected"));
+		});
+	}
+
 	///初期設定がカスタムの場合はそれぞれ初期値を入れて初期構築
 	if(this.Difficulty === "custom"){
-		if(this.Width != null && !isNaN(this.Width)){ $width.val(this.Width || 9); }
-		if(this.Height != null && !isNaN(this.Height)){ $height.val(this.Height || 9); }
-		if(this.Ratio != null && !isNaN(this.Ratio)){ $ratio.val(this.Ratio || 12); }
+		$width.val(parseInt(this.Width, 10) || 9);
+		$height.val(parseInt(this.Height, 10) || 9);
+		$ratio.val(parseFloat(this.Ratio) || 12);
 		this.Build();
 	}
 	///custom以外はそれぞれの難易度に初期値として指定されている入力値で地雷原を初期構築
@@ -212,7 +221,12 @@ MineSweeper.prototype.SelectDifficulty = function(_key){
  * 地雷原の作成
  */
 MineSweeper.prototype.Build = function(){
-	var rnd = new Random(typeof this.Seed === "number" ? [this.Seed] : null);
+	//var seed_cache = (this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed,10) : Date.now();
+	//var rnd = new Random([seed_cache]);
+	//var seed_cache = (this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed, 10)
+	//var rnd = new Random((this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed,10) : null);
+	var rnd = new Random(this.Seed ? [this.Seed] : null);
+	var seed_cache = this.Seed || rnd.seed;
 
 	//プレイ結果を初期化
 	this.Result = null;
@@ -293,7 +307,8 @@ MineSweeper.prototype.Build = function(){
 		Ops: 0,
 		ThreeBV: 0,
 		SolvedThreeBV: 0,
-		BombTotal: this.BombTotal
+		BombTotal: this.BombTotal,
+		Seed: seed_cache
 	};
 
 	//Opsの調査
@@ -375,7 +390,8 @@ MineSweeper.prototype.gameover = function(){
 	this.$area.find("p.mine-result").addClass("fail").text("Explosion!");
 
 	//終了時のコールバック実行
-	if(this.FinishCallback){ this.FinishCallback(this.info); }
+	var _resp = $.extend(true, {}, this.info, {Result: false});
+	if(this.FinishCallback){ this.FinishCallback(_resp); }
 };
 
 /**
@@ -390,10 +406,11 @@ MineSweeper.prototype.gameclear = function(){
 
 	//結果の画面出力
 	this.Result = "success";
-	this.$area.find("p.mine-result").addClass("clear").text("Success!");
+	this.$area.find("p.mine-result").addClass("clear").text("Clear!");
 
 	//終了時のコールバック実行
-	if(this.FinishCallback){ this.FinishCallback(this.info); }
+	var _resp = $.extend(true, {}, this.info, {Result: true});
+	if(this.FinishCallback){ this.FinishCallback(_resp); }
 };
 
 /**
@@ -635,7 +652,6 @@ MineCell.prototype.Alt = function (){
 	if(this.open || this.Field.Result != null){ return; }
 	this.Field.info.Right++;
 
-	//var altclass = this.Field.Question ? ["", "splite-flag", "splite-question", ""] : ["splite-flag", ""];
 	var altclass = ["", "splite-flag"];
 	var flag_index = 1;
 	if(this.Field.Question){ altclass.push("splite-question"); }
@@ -654,26 +670,7 @@ MineCell.prototype.Alt = function (){
 		.addClass(altclass[this.altstatus]);
 
 	this.Field.refresh_info();
-
-	/*
-		var $p = this.$e.find('p');
-		$p.removeClass(altclass.join(" "));
-		$p.css("background-size", this.Field.CellSize + "px");
-		$p.addClass(altclass[this.altstatus] || "");
-		this.altstatus = (this.altstatus + 1) % altclass.length;
-
-
-		//旗の場合
-		if(this.altstatus === 1){ this.Field.info.Flags++; }
-		else if(this.altstatus === (2 % altclass.length)){ this.Field.info.Flags--; }
-
-
-		this.Field.refresh_info();
-	*/
 };
-
-
-
 
 return MineSweeper;
 })(window.jQuery);
