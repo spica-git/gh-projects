@@ -128,6 +128,36 @@ table.mine-field td.mine-open {
 	border: 1px solid white;
 }
 
+div.mine-log-panel {
+	height: 16rem;
+	overflow-y: scroll;
+}
+div.mine-log-panel div.mine-log-control{
+	text-align: left;
+	margin: 2px;
+}
+table.mine-log {
+	width: 100%;
+	border: 1px solid #404080;
+}
+table.mine-log > thead th {
+	background-color: #404080;
+	color: white;
+	padding: 2px 1rem;
+}
+table.mine-log > tbody tr:nth-child(odd) {
+	background-color: #e0e0ff;
+}
+div.mine-log-panel button {
+	border: 1px solid #404080;
+	background-color: #404080;
+	color: white;
+	font-size: 12px;
+}
+div.mine-log-panel button:hover{
+	color: #d0d0ff;
+}
+
 
 
 

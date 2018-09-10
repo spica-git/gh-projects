@@ -1,4 +1,27 @@
-
+/**
+ * @license
+ * MIT License
+ * 
+ * Copyright (c) 2017 spica.tokyo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 window.MineSweeper = (function($){
 "use strict";
 
@@ -58,8 +81,9 @@ function Random (arg){
 
 //10秒間待ってやる……ではなく、ゲーム中に経過時間の更新が10秒間行われないと、
 //例外エラーとして扱って、ゲームが強制終了します。
-//ブラウザのデバッガーツールとかでブレイクポイントをいれようとすると起きるよ（*￣∇￣）
-var CONST_ILLEGAL_DELAY_MS = 100000;
+//ブラウザのデバッガーツールとかでブレイクポイントをいれると起きるよ（*￣∇￣）
+var REFRESH_INTERVAL_MS = 97;
+var ILLEGAL_INTERVAL_MS = 100000;
 
 //難易度テーブル
 // [ "選択名", 幅, 高さ, 爆弾の割合, セルサイズの初期値 ]
@@ -90,21 +114,22 @@ function MineSweeper(_config){
 	$.extend(true, this, {
 		Seed: null, //乱数シード
 		Difficulty: "normal", //デフォルト難易度
-		Question: true, //右クリックでクエスチョンマークを使用する
-		illegal_delay_ms: CONST_ILLEGAL_DELAY_MS
+		Question: false //右クリックでクエスチョンマークを使用する
 	}, _config||{});
 
 	this.Seed = parseInt(this.Seed, 10) || null;
 
 	///難易度選択のselect要素を作る
 	var $sel_difficulty = $('<select name="difficulty">').on("change", (function(_e){
-		this.SelectDifficulty($(_e.target).val());
+		this.d = $(_e.target).val();
+		this.SelectDifficulty(this.d);
 	}).bind(this));
 	for(var i=0; i < TABLE_DIFFICULTY.length; i++){
 		var $opt = $('<option>'+ TABLE_DIFFICULTY[i][0] +'</option>');
 		$sel_difficulty.append($opt);
 	}
-	$sel_difficulty.val(this.Difficulty || "normal");
+	this.d = this.Difficulty || "normal";
+	$sel_difficulty.val(this.d);
 
 	///セルの表示サイズ選択のselect要素を作る
 	var $sel_cellsize = $('<select name="cellsize">').on("change", (function(_e){
@@ -184,13 +209,66 @@ function MineSweeper(_config){
 		this.SelectDifficulty($sel_difficulty.val());
 	}
 
-
-//debug:これはデバッグモード
-window.ms = this;
+	try{
+		if(this.ShowLog){
+			var logdata = JSON.parse(this.LogData);
+			var $logtable = $('<table class="mine-log">');
+			$logtable.append($('<thead>').append($('<tr>')
+				.append($('<th>').text("クリックタイム"))
+				.append($('<th>').text("x座標"))
+				.append($('<th>').text("y座標"))
+				.append($('<th>').text("ボタン"))
+			));
+			var $tbody = $('<tbody>');
+			$logtable.append($tbody);
+			for(var i=0; i < logdata.length; i++){
+				var row = logdata[i];
+				$tbody.append($('<tr>')
+					.append($('<td>').text(row.time))
+					.append($('<td>').text(row.x))
+					.append($('<td>').text(row.y))
+					.append($('<td>').text(({"Left":"左","Right":"右"})[row.btn] || ""))
+				);
+			}
+	
+			this.$area.append(
+				$('<div class="mine-log-panel">')
+					.append($('<div class="mine-log-control">').append(
+						$('<button name="logreplay">').text("リプレイ")
+						.on("click", (function(_e){ this.Replay(); }).bind(this))
+					))
+					.append($logtable)
+			);
+		}
+	}
+	catch(ex){
+		console.warn("ログデータの表示に失敗しました");
+	}
 
 	///出力用の最上位要素を返す
 	return this.$area
 }
+
+/**
+ * ログプレイ内容の再生
+ */
+MineSweeper.prototype.Replay = function(){
+	this.Build();
+
+	var logdata = JSON.parse(this.LogData);
+	var fnReplay = (function(_logdata){
+		if(_logdata.length > 0){
+			setTimeout((function(){
+				var row = _logdata.shift();
+				var cellindex = row.y * this.h + row.x;
+				if(row.btn === "Left"){ this.cells[cellindex].Dig(); }
+				else if(row.btn === "Right"){ this.cells[cellindex].Alt(); }
+				fnReplay();
+			}).bind(this), 200);
+		}
+	}).bind(this, logdata);
+	fnReplay();
+};
 
 /**
  * 難易度選択の実行
@@ -221,10 +299,6 @@ MineSweeper.prototype.SelectDifficulty = function(_key){
  * 地雷原の作成
  */
 MineSweeper.prototype.Build = function(){
-	//var seed_cache = (this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed,10) : Date.now();
-	//var rnd = new Random([seed_cache]);
-	//var seed_cache = (this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed, 10)
-	//var rnd = new Random((this.Seed != null && isNaN(seed_cache)) ? parseInt(this.Seed,10) : null);
 	var rnd = new Random(this.Seed ? [this.Seed] : null);
 	var seed_cache = this.Seed || rnd.seed;
 
@@ -235,16 +309,16 @@ MineSweeper.prototype.Build = function(){
 	this.CellSize = parseInt(this.$area.find('select[name="cellsize"]').val(), 10) || 20;
 
 	//地雷原のサイズと爆弾比率を入力欄からもってきて最低値など補正
-	this.width = parseInt(this.$area.find('input[name="f-width"]').val(), 10);
-	if(isNaN(this.width) || this.width < 1){ this.width = 1; }
-	this.height = parseInt(this.$area.find('input[name="f-height"]').val(), 10);
-	if(isNaN(this.height) || this.height < 1){ this.height = 1; }
+	this.w = parseInt(this.$area.find('input[name="f-width"]').val(), 10);
+	if(isNaN(this.w) || this.w < 1){ this.w = 1; }
+	this.h = parseInt(this.$area.find('input[name="f-height"]').val(), 10);
+	if(isNaN(this.h) || this.h < 1){ this.h = 1; }
 	var ratio = this.$area.find('input[name="f-mine"]').val();
-	ratio = (isNaN(ratio) || ratio <= 0) ? 24 : parseFloat(ratio);
-	var fieldsize = this.width * this.height;
+	this.r = (isNaN(ratio) || ratio <= 0) ? 24 : parseFloat(ratio);
+	var fieldsize = this.w * this.h;
 
 	//爆弾の総数を確定させる。0個にはしない。
-	this.BombTotal = Math.round((fieldsize * ratio) / 100);
+	this.BombTotal = Math.round((fieldsize * this.r) / 100);
 	if(this.BombTotal <= 0){ this.BombTotal = 1; }
 
 	//セルの作成
@@ -266,10 +340,12 @@ MineSweeper.prototype.Build = function(){
 	//一次元配列のセルを二次元配列（※table要素）に並べます
 	var $tbody = this.$area.find("table.mine-field > tbody");
 	$tbody.empty();
-	for(var cell_y=0, cell_index=0; cell_y < this.height; cell_y++){
+	for(var cell_y=0, cell_index=0; cell_y < this.h; cell_y++){
 		var $tr = $('<tr>');
-		for(var cell_x=0; cell_x < this.width; cell_x++, cell_index++){
+		for(var cell_x=0; cell_x < this.w; cell_x++, cell_index++){
 			var cell = this.cells[cell_index];
+			cell.x = cell_x;
+			cell.y = cell_y;
 
 			//周囲の地雷情報を取得
 			for(var arround_i = 0; arround_i < 9; arround_i++){
@@ -279,11 +355,11 @@ MineSweeper.prototype.Build = function(){
 				//地雷原からはみ出さない範囲で周囲の座標を指定
 				var _x = cell_x + (arround_i % 3 - 1);
 				var _y = cell_y + ((arround_i / 3 & 3) - 1);
-				if(_y < 0 || _y >= this.height || _x < 0 || _x >= this.width){ continue; }
+				if(_y < 0 || _y >= this.h || _x < 0 || _x >= this.w){ continue; }
 
 				//周囲のセルを中心のセルから参照できるようにしておく
 				//爆弾の総数もここでカウント
-				var m = this.cells[_y * this.width + _x];
+				var m = this.cells[_y * this.w + _x];
 				if(m==null){ continue; }
 				cell.arrounds.push(m);
 				if(m.bomb){ cell.arround_bombs++; }
@@ -307,6 +383,7 @@ MineSweeper.prototype.Build = function(){
 		Ops: 0,
 		ThreeBV: 0,
 		SolvedThreeBV: 0,
+		PlayLog: [],
 		BombTotal: this.BombTotal,
 		Seed: seed_cache
 	};
@@ -358,6 +435,7 @@ MineSweeper.prototype.Build = function(){
 	this.refresh_info();
 };
 
+
 /**
  * セルのリサイズを実行する。正方形のみ。
  * @param {number} _size ピクセル指定のセルサイズ
@@ -404,13 +482,56 @@ MineSweeper.prototype.gameclear = function(){
 		this._interval_id = null;
 	}
 
-	//結果の画面出力
-	this.Result = "success";
-	this.$area.find("p.mine-result").addClass("clear").text("Clear!");
+	//クリアデータのチェック
+	var correct = true;
+	var bvcount = 0;
+	for(var i=0; i < this.info.PlayLog.length; i++){
+		var log = this.info.PlayLog[i];
+		var index = log.y * this.w + log.x;
+		var cell = this.cells[index];
 
-	//終了時のコールバック実行
-	var _resp = $.extend(true, {}, this.info, {Result: true});
-	if(this.FinishCallback){ this.FinishCallback(_resp); }
+		if(cell == null){
+			correct = false;
+			break;
+		}
+		else if(log.btn === "Left"){
+			if(cell.bomb){
+				correct = false;
+				break;
+			}
+			else {
+				if(cell.bv == null || (cell.bv && cell.arround_bombs === 0)){
+					bvcount++;
+				}
+			}
+		}
+	}
+	if(bvcount !== this.info.ThreeBV){
+		correct = false;
+	}
+
+	//正しいクリアデータ
+	if(correct){
+		//結果の画面出力
+		this.Result = "success";
+		this.$area.find("p.mine-result").addClass("clear").text("Clear!");
+
+		//終了時のコールバック実行
+		var _resp = $.extend(true, {}, this.info, {
+			Difficulty: this.$area.find('select[name="difficulty"]').val(),
+			Width: this.w,
+			Height: this.h,
+			Ratio: this.r,
+			Result: true
+		});
+		if(this.FinishCallback){ this.FinishCallback(_resp); }
+	}
+	//不正なクリアデータ
+	else{
+		this.Result = "illegal";
+		this.$area.find("p.mine-result").addClass("illegal").text("illegal stop");
+		if(this.FinishCallback){ this.FinishCallback({Result: false}); }
+	}
 };
 
 /**
@@ -429,32 +550,13 @@ MineSweeper.prototype.illegal = function(){
 };
 
 /**
- * ゲーム終了の判定と、終了したときの処理の呼び出し
- */
-MineSweeper.prototype.ResultCheck = function(){
-	var danger = false;
-	for(var i=0; i < this.cells.length; i++){
-		if(this.cells[i].bomb && this.cells[i].open) {
-			this.gameover();
-			return;
-		}
-		else if(!this.cells[i].bomb && !this.cells[i].open){
-			danger = true;
-		}
-	}
-	if(!danger){
-		this.gameclear();
-	}
-};
-
-/**
  * ゲーム開始（経過時間のカウント開始）
  */
 MineSweeper.prototype.gamestart = function(){
 	this.info.StartTime = this.info.PastTime = Date.now();
 	this._interval_id = setInterval((function(){
 		this.refresh_time();
-	}).bind(this), 10);
+	}).bind(this), REFRESH_INTERVAL_MS);
 };
 
 /**
@@ -465,7 +567,7 @@ MineSweeper.prototype.gamestart = function(){
 MineSweeper.prototype.refresh_time = function(){
 	var past = Date.now();
 	//一定時間以上スクリプトが停止したら終了
-	if((this.info.PastTime + this.illegal_delay_ms) < past){
+	if((this.info.PastTime + ILLEGAL_INTERVAL_MS) < past){
 		this.illegal();
 		return;
 	}
@@ -477,7 +579,6 @@ MineSweeper.prototype.refresh_time = function(){
 
 	var bvs = !this.info.Rtime ? 0 : ((this.info.SolvedThreeBV || 1) / this.info.Rtime);
 	var est = !bvs ? 0 : (this.info.ThreeBV / bvs);
-	//this.info.Rtime + (this.info.ThreeBV / this.info.SolvedThreeBV * bvs);
 	this.$rtimeinfo.text(
 		"Est RTime: " + est.toFixed(2) + "\n" +
 		"3BV/s: " + bvs.toFixed(2)
@@ -541,11 +642,26 @@ function MineCell(_FieldObj, _isBomb){
 						this.Field.info.SolvedThreeBV++;
 					}
 				}
+				var rnd = new Random([parseInt("" + this.x + this.y + (this.Field.info.PlayLog.length + 1), 10)]);
+				this.Field.info.PlayLog.push({
+					x:this.x,
+					y:this.y,
+					time:this.Field.info.Rtime,
+					btn:"Left",
+					check: rnd()
+				});
 
 				this.Dig();
 
 				this.Field.refresh_info();
-				this.Field.ResultCheck();
+
+				if(this.bomb){
+					this.Field.gameover();
+				}
+				else if(this.Field.info.ThreeBV === this.Field.info.SolvedThreeBV){
+					this.Field.gameclear();
+				}
+				//this.Field.ResultCheck();
 			}
 		}.bind(this)))
 		.on("contextmenu", this.Alt.bind(this));
@@ -637,8 +753,8 @@ MineCell.prototype.Dig = function (){
 		$p.css("background-color", "#d02020");
 	}
 	//セーフ
-	//周囲に爆弾が無いセルの場合は再帰して周囲を全部開く
 	else if(this.arround_bombs === 0){
+		//周囲に爆弾が無いセルの場合は再帰して周囲を全部開く
 		for(var i=0; i < this.arrounds.length; i++){ this.arrounds[i].Dig(); }
 	}
 };
@@ -651,6 +767,15 @@ MineCell.prototype.Dig = function (){
 MineCell.prototype.Alt = function (){
 	if(this.open || this.Field.Result != null){ return; }
 	this.Field.info.Right++;
+
+	var rnd = new Random([parseInt("" + this.x + this.y + (this.Field.info.PlayLog.length + 1), 10)]);
+	this.Field.info.PlayLog.push({
+		x:this.x,
+		y:this.y,
+		time:this.Field.info.Rtime,
+		btn:"Right",
+		check: rnd()
+	});
 
 	var altclass = ["", "splite-flag"];
 	var flag_index = 1;
