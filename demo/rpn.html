@@ -1,7 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
+	<meta charset="UTF-8">
 	<title>逆ポーランド記法計算機</title>
+	<meta name="author" content="spica.tokyo">
+	<link rel="stylesheet" type="text/css" href="../css/main.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+	<script src="../src/gh_postrender.js"></script>
 	<script src="../src/rpn.min.js"></script>
 </head>
 <script>
@@ -55,12 +60,11 @@ rpn
 </script>
 <body>
 	<div style="padding:32px;">
-<h2>逆ポーランド記法計算機です</h2>
+	<h2>逆ポーランド記法計算機</h2>
 	<p>
 		計算式（中置記法）<br>
 		<input id="exp" type="text" style="padding:4px; min-width:20rem; width:80%"></input><br>
 		<button onClick="GenRPN();">逆ポーランド記法の式を生成</button>
-		<p id="exp"></p>
 	</p>
 	<p>
 		逆ポーランド記法の式<br>
