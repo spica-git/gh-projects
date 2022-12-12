@@ -1,0 +1,53 @@
+<style type="text/css">
+	#ExportJsonWrap {
+		margin: 16px;
+	}
+
+	#ExportJsonWrap table {
+		border: 1px;
+	}
+
+	#ExportJsonWrap table thead td {
+		background-color: #e0e0f0;
+	}
+
+	#ExportJsonWrap td {
+		padding: 4px;
+		border: 1px solid black;
+	}
+
+	#ExportJsonWrap textarea {
+		width: 40em;
+		height: 16em;
+		padding: 8px;
+	}
+
+	.exportcolumns {
+		display: flex;
+	}
+</style>
+<div id="ExportJsonWrap">
+	<p>
+		<button id="exportschema">BigQueryテーブルスキーマの取得</button>
+		<button id="exportjson">レコードデータのjsonダウンロード</button>
+	</p>
+	<div class="exportcolumns">
+		<div>
+			<table id="exportlayout">
+				<thead>
+					<tr>
+						<td>フィールド名</td>
+						<td>フィールドコード</td>
+						<td>BigQueryテーブルのカラム名 ※</td>
+					</tr>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+			<p>
+				※ BigQueryテーブルのフィールド名に使用できるよう半角英数アンダースコアで構成しましょう
+			</p>
+		</div>
+		<textarea id="exportarea"></textarea>
+	</div>
+</div>
